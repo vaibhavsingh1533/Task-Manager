@@ -1,0 +1,49 @@
+<%- include('partials/header') %>
+
+<div class="auth-wrapper">
+  <div class="auth-card glass-panel">
+    <div class="auth-header">
+      <h2 class="auth-title">Welcome Back</h2>
+      <p class="auth-subtitle">Sign in to access your task dashboard</p>
+    </div>
+
+    <form id="login-form" novalidate>
+      <div class="form-group">
+        <label for="username" class="form-label">Username</label>
+        <input 
+          type="text" 
+          id="username" 
+          name="username" 
+          class="form-input" 
+          placeholder="e.g., alex" 
+          required 
+          autocomplete="username"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="password" class="form-label">Password</label>
+        <input 
+          type="password" 
+          id="password" 
+          name="password" 
+          class="form-input" 
+          placeholder="••••••••" 
+          required 
+          autocomplete="current-password"
+        >
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; height: 42px;">
+        <span class="btn-text">Sign In</span>
+      </button>
+    </form>
+
+    <p class="auth-toggle-text">
+      Don't have an account? 
+      <a href="/register" class="auth-toggle-link">Create one now</a>
+    </p>
+  </div>
+</div>
+
+<%- include('partials/footer') %>

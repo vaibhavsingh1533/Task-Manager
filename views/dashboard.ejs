@@ -1,0 +1,357 @@
+<%- include('partials/header') %>
+
+<!-- Dashboard Summary Stats & Progress Bar -->
+<div class="stats-container" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+  <div class="glass-panel stat-card" style="padding: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+    <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Total Tasks</span>
+    <span id="stat-total" style="font-size: 2rem; font-weight: 800; font-family: var(--font-family-display); color: var(--color-primary);">0</span>
+  </div>
+  <div class="glass-panel stat-card" style="padding: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+    <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Completed</span>
+    <span id="stat-completed" style="font-size: 2rem; font-weight: 800; font-family: var(--font-family-display); color: var(--color-done);">0</span>
+  </div>
+  <div class="glass-panel stat-card" style="padding: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+    <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Pending</span>
+    <span id="stat-pending" style="font-size: 2rem; font-weight: 800; font-family: var(--font-family-display); color: var(--color-todo);">0</span>
+  </div>
+  <div class="glass-panel stat-card" style="padding: 1rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+    <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Overdue</span>
+    <span id="stat-overdue" style="font-size: 2rem; font-weight: 800; font-family: var(--font-family-display); color: hsl(0, 84%, 60%);">0</span>
+  </div>
+</div>
+
+<!-- Animated Completion Progress Bar -->
+<div class="glass-panel progress-panel" style="padding: 1.25rem 1.5rem; margin-bottom: 2rem; border-radius: var(--radius-md);">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+    <span style="font-weight: 600; font-size: 0.9rem; color: var(--text-secondary);">Project Progress</span>
+    <span id="progress-percent" style="font-weight: 700; font-size: 0.9rem; color: var(--color-primary);">0%</span>
+  </div>
+  <div class="progress-bar-track" style="height: 10px; width: 100%; background-color: var(--border-color); border-radius: 5px; overflow: hidden; position: relative;">
+    <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--color-primary), var(--color-done)); border-radius: 5px; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+  </div>
+</div>
+
+<!-- Filter Panel -->
+<div class="glass-panel filter-panel" style="display: flex; gap: 1rem; align-items: center; padding: 1rem 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
+  <div style="flex: 1; min-width: 250px; position: relative;">
+    <svg style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-tertiary);" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+    </svg>
+    <input type="text" id="search-input" class="form-input" placeholder="Search tasks..." style="padding-left: 2.75rem;">
+  </div>
+  
+  <div style="display: flex; gap: 0.75rem; align-items: center;">
+    <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Priority:</span>
+    <select id="priority-filter" class="form-input" style="width: 130px; padding: 0.5rem 1rem; font-size: 0.875rem;">
+      <option value="all">All</option>
+      <option value="high">High</option>
+      <option value="medium">Medium</option>
+      <option value="low">Low</option>
+    </select>
+  </div>
+
+  <button id="open-create-modal-btn" class="btn btn-primary" style="margin-left: auto;">
+    <svg style="width: 18px; height: 18px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 12h14M12 5v14"/>
+    </svg>
+    <span>New Task</span>
+  </button>
+</div>
+
+<!-- Helper variables for Date checking -->
+<% const today = new Date(); today.setHours(0, 0, 0, 0); %>
+
+<!-- Kanban Board -->
+<div class="board-container">
+  
+  <!-- TODO COLUMN -->
+  <div class="board-column glass-panel" data-stage="todo">
+    <div class="column-header">
+      <div class="column-title">
+        <span class="column-dot todo"></span>
+        <span>To Do</span>
+      </div>
+      <span class="column-count" id="count-todo"><%= todoTasks.length %></span>
+    </div>
+    
+    <div class="task-list" id="list-todo">
+      <!-- Empty state placeholder -->
+      <div class="empty-state" style="display: <%= todoTasks.length === 0 ? 'flex' : 'none' %>; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1rem; color: var(--text-tertiary); text-align: center; height: 100%;">
+        <svg style="width: 48px; height: 48px; margin-bottom: 0.75rem; stroke: var(--border-color);" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4M12 16h.01"/>
+        </svg>
+        <p style="font-size: 0.85rem; font-weight: 500;">No tasks in queue</p>
+      </div>
+
+      <% todoTasks.forEach(function(task) { %>
+        <% 
+          let dateClass = '';
+          let isOverdue = false;
+          if (task.dueDate) {
+            const due = new Date(task.dueDate);
+            due.setHours(0,0,0,0);
+            if (due < today) {
+              isOverdue = true;
+              dateClass = 'overdue';
+            } else if (due.getTime() === today.getTime()) {
+              dateClass = 'due-today';
+            }
+          }
+        %>
+        <div class="glass-panel task-card todo" draggable="true" data-id="<%= task._id %>" data-priority="<%= task.priority %>" data-due="<%= task.dueDate ? task.dueDate.toISOString().split('T')[0] : '' %>">
+          <div class="task-card-header">
+            <h3 class="task-title"><%= task.title %></h3>
+            <span class="priority-badge <%= task.priority %>"><%= task.priority %></span>
+          </div>
+          <% if (task.description) { %>
+            <p class="task-desc"><%= task.description %></p>
+          <% } %>
+          <div class="task-footer">
+            <% if (task.dueDate) { %>
+              <span class="task-date due-tag <%= dateClass %>">
+                <svg style="width: 12px; height: 12px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+                </svg>
+                <span><%= isOverdue ? 'Overdue: ' : '' %><%= new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></span>
+              </span>
+            <% } else { %>
+              <span class="task-date">
+                <%= new Date(task.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %>
+              </span>
+            <% } %>
+            <div class="task-actions">
+              <button class="task-action-btn edit-task-btn" title="Edit Task" data-id="<%= task._id %>" data-title="<%= task.title %>" data-description="<%= task.description %>" data-stage="<%= task.stage %>" data-priority="<%= task.priority %>" data-due="<%= task.dueDate ? task.dueDate.toISOString().split('T')[0] : '' %>">
+                <svg style="width: 18px; height: 18px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                </svg>
+              </button>
+              <button class="task-action-btn delete-btn" title="Delete Task" data-id="<%= task._id %>">
+                <svg style="width: 18px; height: 18px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"/>
+                </svg>
+              </button>
+              <button class="task-action-btn move-right-btn" title="Move to In Progress" data-id="<%= task._id %>" data-target="in_progress">
+                <svg style="width: 18px; height: 18px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+
+  <!-- IN PROGRESS COLUMN -->
+  <div class="board-column glass-panel" data-stage="in_progress">
+    <div class="column-header">
+      <div class="column-title">
+        <span class="column-dot progress"></span>
+        <span>In Progress</span>
+      </div>
+      <span class="column-count" id="count-in_progress"><%= progressTasks.length %></span>
+    </div>
+
+    <div class="task-list" id="list-in_progress">
+      <!-- Empty state placeholder -->
+      <div class="empty-state" style="display: <%= progressTasks.length === 0 ? 'flex' : 'none' %>; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1rem; color: var(--text-tertiary); text-align: center; height: 100%;">
+        <svg style="width: 48px; height: 48px; margin-bottom: 0.75rem; stroke: var(--border-color);" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4M12 16h.01"/>
+        </svg>
+        <p style="font-size: 0.85rem; font-weight: 500;">No tasks active</p>
+      </div>
+
+      <% progressTasks.forEach(function(task) { %>
+        <% 
+          let dateClass = '';
+          let isOverdue = false;
+          if (task.dueDate) {
+            const due = new Date(task.dueDate);
+            due.setHours(0,0,0,0);
+            if (due < today) {
+              isOverdue = true;
+              dateClass = 'overdue';
+            } else if (due.getTime() === today.getTime()) {
+              dateClass = 'due-today';
+            }
+          }
+        %>
+        <div class="glass-panel task-card in_progress" draggable="true" data-id="<%= task._id %>" data-priority="<%= task.priority %>" data-due="<%= task.dueDate ? task.dueDate.toISOString().split('T')[0] : '' %>">
+          <div class="task-card-header">
+            <h3 class="task-title"><%= task.title %></h3>
+            <span class="priority-badge <%= task.priority %>"><%= task.priority %></span>
+          </div>
+          <% if (task.description) { %>
+            <p class="task-desc"><%= task.description %></p>
+          <% } %>
+          <div class="task-footer">
+            <% if (task.dueDate) { %>
+              <span class="task-date due-tag <%= dateClass %>">
+                <svg style="width: 12px; height: 12px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+                </svg>
+                <span><%= isOverdue ? 'Overdue: ' : '' %><%= new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></span>
+              </span>
+            <% } else { %>
+              <span class="task-date">
+                <%= new Date(task.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %>
+              </span>
+            <% } %>
+            <div class="task-actions">
+              <button class="task-action-btn move-left-btn" title="Move to To Do" data-id="<%= task._id %>" data-target="todo">
+                <svg style="width: 18px; height: 18px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+              </button>
+              <button class="task-action-btn edit-task-btn" title="Edit Task" data-id="<%= task._id %>" data-title="<%= task.title %>" data-description="<%= task.description %>" data-stage="<%= task.stage %>" data-priority="<%= task.priority %>" data-due="<%= task.dueDate ? task.dueDate.toISOString().split('T')[0] : '' %>">
+                <svg style="width: 18px; height: 18px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                </svg>
+              </button>
+              <button class="task-action-btn delete-btn" title="Delete Task" data-id="<%= task._id %>">
+                <svg style="width: 18px; height: 18px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"/>
+                </svg>
+              </button>
+              <button class="task-action-btn move-right-btn" title="Move to Done" data-id="<%= task._id %>" data-target="done">
+                <svg style="width: 18px; height: 18px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+
+  <!-- DONE COLUMN -->
+  <div class="board-column glass-panel" data-stage="done">
+    <div class="column-header">
+      <div class="column-title">
+        <span class="column-dot done"></span>
+        <span>Done</span>
+      </div>
+      <span class="column-count" id="count-done"><%= doneTasks.length %></span>
+    </div>
+
+    <div class="task-list" id="list-done">
+      <!-- Empty state placeholder -->
+      <div class="empty-state" style="display: <%= doneTasks.length === 0 ? 'flex' : 'none' %>; flex-direction: column; align-items: center; justify-content: center; padding: 2rem 1rem; color: var(--text-tertiary); text-align: center; height: 100%;">
+        <svg style="width: 48px; height: 48px; margin-bottom: 0.75rem; stroke: var(--border-color);" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/>
+        </svg>
+        <p style="font-size: 0.85rem; font-weight: 500;">No tasks completed</p>
+      </div>
+
+      <% doneTasks.forEach(function(task) { %>
+        <div class="glass-panel task-card done" draggable="true" data-id="<%= task._id %>" data-priority="<%= task.priority %>" data-due="<%= task.dueDate ? task.dueDate.toISOString().split('T')[0] : '' %>">
+          <div class="task-card-header">
+            <h3 class="task-title" style="text-decoration: line-through; opacity: 0.7;"><%= task.title %></h3>
+            <span class="priority-badge <%= task.priority %>" style="opacity: 0.7;"><%= task.priority %></span>
+          </div>
+          <% if (task.description) { %>
+            <p class="task-desc" style="opacity: 0.6;"><%= task.description %></p>
+          <% } %>
+          <div class="task-footer">
+            <span class="task-date" style="display: inline-flex; align-items: center; gap: 4px; color: var(--color-done); font-weight: 600;">
+              <svg style="width: 18px; height: 18px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 6 9 17l-5-5"/>
+              </svg>
+              <span>Finished</span>
+            </span>
+            <div class="task-actions">
+              <button class="task-action-btn move-left-btn" title="Move to In Progress" data-id="<%= task._id %>" data-target="in_progress">
+                <svg style="width: 18px; height: 18px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+              </button>
+              <button class="task-action-btn edit-task-btn" title="Edit Task" data-id="<%= task._id %>" data-title="<%= task.title %>" data-description="<%= task.description %>" data-stage="<%= task.stage %>" data-priority="<%= task.priority %>" data-due="<%= task.dueDate ? task.dueDate.toISOString().split('T')[0] : '' %>">
+                <svg style="width: 18px; height: 18px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                </svg>
+              </button>
+              <button class="task-action-btn delete-btn" title="Delete Task" data-id="<%= task._id %>">
+                <svg style="width: 18px; height: 18px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+
+</div>
+
+<!-- TASK MODAL -->
+<div id="task-modal" class="modal-overlay" style="display: none;">
+  <div class="modal-content glass-panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <h2 id="modal-title" style="font-size: 1.5rem; color: var(--text-primary);">Create Task</h2>
+      <button id="close-modal-btn" class="task-action-btn" style="padding: 6px;">
+        <svg style="width: 20px; height: 20px;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    
+    <form id="task-form" novalidate>
+      <input type="hidden" id="task-id" name="taskId">
+      
+      <div class="form-group">
+        <label for="task-title-input" class="form-label">Title</label>
+        <input type="text" id="task-title-input" name="title" class="form-input" placeholder="What needs to be done?" required>
+      </div>
+
+      <div class="form-group">
+        <label for="task-desc-input" class="form-label">Description (Optional)</label>
+        <textarea id="task-desc-input" name="description" class="form-input" rows="3" placeholder="Add some details..." style="resize: vertical;"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Priority</label>
+        <div style="display: flex; gap: 0.5rem; width: 100%;">
+          <label style="flex: 1; text-align: center; cursor: pointer; position: relative;">
+            <input type="radio" name="priority" value="low" style="position: absolute; opacity: 0; width: 0; height: 0;">
+            <div class="priority-selector-pill low" style="padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 0.85rem; font-weight: 600; text-transform: capitalize; transition: all var(--transition-fast);">Low</div>
+          </label>
+          <label style="flex: 1; text-align: center; cursor: pointer; position: relative;">
+            <input type="radio" name="priority" value="medium" checked style="position: absolute; opacity: 0; width: 0; height: 0;">
+            <div class="priority-selector-pill medium" style="padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 0.85rem; font-weight: 600; text-transform: capitalize; transition: all var(--transition-fast);">Medium</div>
+          </label>
+          <label style="flex: 1; text-align: center; cursor: pointer; position: relative;">
+            <input type="radio" name="priority" value="high" style="position: absolute; opacity: 0; width: 0; height: 0;">
+            <div class="priority-selector-pill high" style="padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); font-size: 0.85rem; font-weight: 600; text-transform: capitalize; transition: all var(--transition-fast);">High</div>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div>
+          <label for="task-stage-input" class="form-label">Stage</label>
+          <select id="task-stage-input" name="stage" class="form-input" style="appearance: none; background-image: url('data:image/svg+xml;utf8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22%3E%3C/polyline%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 12px center; background-size: 16px;">
+            <option value="todo">To Do</option>
+            <option value="in_progress">In Progress</option>
+            <option value="done">Done</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="task-due-input" class="form-label">Due Date (Optional)</label>
+          <input type="date" id="task-due-input" name="dueDate" class="form-input">
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 2rem;">
+        <button type="button" id="cancel-task-btn" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary" style="min-width: 100px;">
+          <span id="save-btn-text">Create</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/footer') %>
